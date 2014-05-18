@@ -33,7 +33,7 @@ Any contribution is more than welcome! You can contribute through pull requests 
 ## Sample App
 The iOS Sample App included with this project demonstrates how to use many of the features in SSCoreDataManagerc. You can refer to the sample app for an understanding of how to use and setup SSCoreDataManager. The app should work with Core Data as-is.
 
-<img width=700 src="https://raw.github.com/Sam-Spencer/SSCoreDataManager/feature/CoreData%20Screenshot.png"/>
+<img width=700 src="https://raw.githubusercontent.com/Sam-Spencer/SSCoreDataManager/master/CoreData%20Screenshot.png"/>
 
 # Documentation
 Key methods, properties, types, and delegate methods available in SSCoreDataManager are documented below. If you're using [Xcode 5](https://developer.apple.com/technologies/tools/whats-new.html) with SSCoreDataManager, documentation is available directly within Xcode (just Option-Click any method for Quick Help). Additional Core Data information is coming soon to the Wiki.
