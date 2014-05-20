@@ -92,7 +92,7 @@
         return nil;
     }
     
-    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:@"EventDirectory" withExtension:@"momd"];
+    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:self.ModelFileName withExtension:@"momd"];
     _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
     return _managedObjectModel;
 }

@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "99CC5DC41929193C00F624A0"
-               BuildableName = "Core Data Smaple Project.app"
+               BuildableName = "Core Data Sample Project.app"
                BlueprintName = "Core Data Sample Project"
                ReferencedContainer = "container:Core Data Sample Project.xcodeproj">
             </BuildableReference>
@@ -43,7 +43,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "99CC5DC41929193C00F624A0"
-            BuildableName = "Core Data Smaple Project.app"
+            BuildableName = "Core Data Sample Project.app"
             BlueprintName = "Core Data Sample Project"
             ReferencedContainer = "container:Core Data Sample Project.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "99CC5DC41929193C00F624A0"
-            BuildableName = "Core Data Smaple Project.app"
+            BuildableName = "Core Data Sample Project.app"
             BlueprintName = "Core Data Sample Project"
             ReferencedContainer = "container:Core Data Sample Project.xcodeproj">
          </BuildableReference>
@@ -80,7 +80,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "99CC5DC41929193C00F624A0"
-            BuildableName = "Core Data Smaple Project.app"
+            BuildableName = "Core Data Sample Project.app"
             BlueprintName = "Core Data Sample Project"
             ReferencedContainer = "container:Core Data Sample Project.xcodeproj">
          </BuildableReference>

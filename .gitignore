@@ -6,3 +6,45 @@
 #
 # Pods/
 
+#####
+# OS X temporary files that should never be committed
+.DS_Store
+.Trashes
+*.swp
+
+
+####
+# Xcode temporary files that should never be committed
+*~.nib
+
+
+####
+# Xcode build files
+DerivedData/
+build/
+
+
+#####
+# Xcode private settings (window sizes, bookmarks, breakpoints, custom executables, smart groups)
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+
+
+####
+# Xcode 5 personal settings (including custom schemes - unless they are "shared")
+xcuserdata/
+
+
+####
+# Xcode 5 extraneous git checkout information
+*.xccheckout
+Sample Project/Core Data Sample Project.xcodeproj/xcuserdata/Spencers.xcuserdatad/xcschemes/Data Test.xcscheme
+
+Sample Project/Core Data Sample Project.xcodeproj/project.xcworkspace/xcuserdata/Spencers.xcuserdatad/UserInterfaceState.xcuserstate
