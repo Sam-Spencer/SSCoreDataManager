@@ -6,9 +6,17 @@
 //  Copyright (c) 2014 Sam Spencer. All rights reserved.
 //
 
-@import CoreData;
-@protocol SSCoreDataManagerDelegate;
+#if __has_feature(objc_modules)
+    // I recommend enabling Objective-C Modules in your project Build Settings for numerous benefits over regular #imports. Read more from the Modules documentation: http://clang.llvm.org/docs/Modules.html
+    @import Foundation;
+    @import CoreData;
+#else
+    #import <Foundation/Foundation.h>
+    #import <CoreData/CoreData.h>
+#endif
 
+@protocol SSCoreDataManagerDelegate;
+@protocol SSUbiquitousCoreDataManagerDelegate;
 
 typedef enum : NSUInteger {
     /// Error that occurs when attempting to save an uninitialized managed object context.
@@ -32,11 +40,14 @@ kCoreDataManagerErrors;
 + (SSCoreDataManager *)sharedManager;
 
 
-/// This should be the \b first call made to CoreDataManager. This will perform any and all necessary setup. Additionally, it will create or initialize your SQLite and Model files.
+/// This should be the \b first call made to CoreDataManager. This will perform any and all necessary setup. Additionally, it will create or initialize your SQLite and Model files. Persistent store and merge policies will be defaulted.
 - (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName;
 
-/// This should be the \b first call made to CoreDataManager. This will perform any and all necessary setup. Additionally, it will create or initialize your SQLite and Model files. If any specific persistent store options (eg. migration) are needed, specify them here.
+/// This should be the \b first call made to CoreDataManager. This will perform any and all necessary setup. Additionally, it will create or initialize your SQLite and Model files. If any specific persistent store options (eg. migration, iCloud) are needed, specify them here. The merge policy defaults to \p NSMergeByPropertyObjectTrumpMergePolicy.
 - (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName withPersistentStoreOptions:(NSDictionary *)options;
+
+/// This should be the \b first call made to CoreDataManager. This will perform any and all necessary setup. Additionally, it will create or initialize your SQLite and Model files. If any specific persistent store options (eg. migration, iCloud) are needed, specify them here. You may also set a merge policy. The merge policy will determine how Core Data handles file conflicts. Defaults to \p NSMergeByPropertyObjectTrumpMergePolicy.
+- (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName withPersistentStoreOptions:(NSDictionary *)options andMergePolicy:(id)policy;
 
 /// Automatically save the managed object context before the current app terminates. Only needs to be called once, during setup.
 - (void)setShouldSaveContextOnAppTermination;
@@ -47,6 +58,9 @@ kCoreDataManagerErrors;
 
 // Returns the URL to the application's Documents directory.
 - (NSURL *)applicationDocumentsDirectory;
+
+/// Returns basic persistent store options for utilizing iCloud and Core Data on iOS 7 or greater.
+- (NSDictionary *)recommendedUbiquitousPersistentStoreOptionsForName:(NSString *)storeName NS_AVAILABLE_IOS(7_0);
 
 
 /// Create a new CoreData managed object from the CoreData Model, and the entity name (should be the same as the class name specified in the model).
@@ -79,8 +93,11 @@ kCoreDataManagerErrors;
 
 
 
-/// The delegate object of the CoreData Manager
+/// The delegate object of the Core Data Manager
 @property (strong, nonatomic) id<SSCoreDataManagerDelegate> delegate;
+
+/// The delegate object of the Core Data Manager for iCloud events
+@property (strong, nonatomic) id<SSUbiquitousCoreDataManagerDelegate> cloudDelegate NS_AVAILABLE_IOS(7_0);
 
 
 /// Returns the managed object context for the application. If the context doesn't already exist, it is created and bound to the persistent store coordinator for the application.
@@ -96,9 +113,30 @@ kCoreDataManagerErrors;
 @end
 
 
+/// The Core Data Manager delegate handles Core Data errors.
 @protocol SSCoreDataManagerDelegate <NSObject>
 
+/// Sent to the delegate when there is an error during a Core Data operation. The error parameter will either contain a known \p kCoreDataManagerErrors error or a CoreData Framework generated error.
 - (void)coreDataManager:(SSCoreDataManager *)manager errorDidOccur:(NSError *)error;
+
+@end
+
+
+/// The Ubiquitious Core Data Manager delegate handles Core Data events with iCloud (ie. file changes, merges, and imports). Only available on iOS 7.0 or higher.
+NS_AVAILABLE_IOS(7_0) @protocol SSUbiquitousCoreDataManagerDelegate <NSObject>
+
+@required
+
+/// Sent to the delegate just before the persistant store changes. Managed context saving and error handling is done before the delegate is notified. Use this opportunity to update the application interface.
+- (void)coreDataManagerStoresWillChange:(SSCoreDataManager *)manager;
+
+/// Sent to the delegate when the persistant store changes. Use this opportunity to update the application interface.
+- (void)coreDataManagerStoresDidChange:(SSCoreDataManager *)manager;
+
+@optional
+
+/// Sent to the delegate when imported ubiquitous content changes. Changes are merged and then saved.
+- (void)coreDataManager:(SSCoreDataManager *)manager persistentStoreDidImportUbiquitousContentChanges:(NSManagedObjectContext *)context;
 
 @end
 

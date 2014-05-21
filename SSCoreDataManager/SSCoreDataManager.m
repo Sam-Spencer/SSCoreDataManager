@@ -8,10 +8,16 @@
 
 #import "SSCoreDataManager.h"
 
+#if !__has_feature(objc_arc)
+    // Add the -fobjc-arc flag to enable ARC for only these files, as described in the ARC documentation: http://clang.llvm.org/docs/AutomaticReferenceCounting.html
+    #error SSCoreDataManager is built with Objective-C ARC. You must enable ARC for these files.
+#endif
+
 @interface SSCoreDataManager ()
 @property (nonatomic, strong) NSString *SQLiteFileName;
-@property (nonatomic, strong) NSString *ModelFileName;
+@property (nonatomic, strong) NSString *modelFileName;
 @property (nonatomic, strong) NSDictionary *persistentStoreOptions;
+@property (nonatomic, assign) id mergePolicyType;
 @end
 
 @implementation SSCoreDataManager
@@ -34,8 +40,14 @@
 }
 
 - (void)dealloc {
+    [self saveObjectContext];
+    
     [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:UIApplicationWillTerminateNotification];
     [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:UIApplicationDidEnterBackgroundNotification];
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:NSPersistentStoreCoordinatorStoresWillChangeNotification];
+    [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:NSPersistentStoreCoordinatorStoresDidChangeNotification];
+    [[NSNotificationCenter defaultCenter] removeObserver:self forKeyPath:NSPersistentStoreDidImportUbiquitousContentChangesNotification];
 }
 
 #pragma mark - Setup
@@ -49,19 +61,30 @@
 }
 
 - (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName {
-    return [self setupDataAndSetSQLiteFileName:SQLiteName andModelFileName:modelName withPersistentStoreOptions:nil];
+    return [self setupDataAndSetSQLiteFileName:SQLiteName andModelFileName:modelName withPersistentStoreOptions:nil andMergePolicy:NSMergeByPropertyObjectTrumpMergePolicy];
 }
 
 - (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName withPersistentStoreOptions:(NSDictionary *)options {
+    return [self setupDataAndSetSQLiteFileName:SQLiteName andModelFileName:modelName withPersistentStoreOptions:options andMergePolicy:NSMergeByPropertyObjectTrumpMergePolicy];
+}
+
+- (NSManagedObjectContext *)setupDataAndSetSQLiteFileName:(NSString *)SQLiteName andModelFileName:(NSString *)modelName withPersistentStoreOptions:(NSDictionary *)options andMergePolicy:(id)policy {
     self.SQLiteFileName = SQLiteName;
-    self.ModelFileName = modelName;
+    self.modelFileName = modelName;
     self.persistentStoreOptions = options;
+    self.mergePolicyType = policy;
+    
+    if ([options objectForKey:NSPersistentStoreUbiquitousContentNameKey]) [self registerForiCloudNotifications];
     
     return [self managedObjectContext];
 }
 
 - (NSURL *)applicationDocumentsDirectory {
     return [[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject];
+}
+
+- (NSDictionary *)recommendedUbiquitousPersistentStoreOptionsForName:(NSString *)storeName {
+    return @{NSPersistentStoreUbiquitousContentNameKey: storeName};
 }
 
 - (NSManagedObjectContext *)managedObjectContext {
@@ -74,6 +97,7 @@
     if (coordinator != nil) {
         _managedObjectContext = [[NSManagedObjectContext alloc] init];
         [_managedObjectContext setPersistentStoreCoordinator:coordinator];
+        [_managedObjectContext setMergePolicy:self.mergePolicyType];
     }
     
     return _managedObjectContext;
@@ -85,14 +109,14 @@
     
     if (_managedObjectModel != nil) return _managedObjectModel;
     
-    if (self.ModelFileName == nil) {
+    if (self.modelFileName == nil) {
         NSError *error = [NSError errorWithDomain:@"Failed to create managed object model. Invalid model file name. Call setupDataAndSetSQLiteFileName:andModelFileName: to set the model file." code:kCDMEInvalidModelFileName userInfo:nil];
         if ([self.delegate respondsToSelector:@selector(coreDataManager:errorDidOccur:)]) [self.delegate coreDataManager:self errorDidOccur:error];
         
         return nil;
     }
     
-    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:self.ModelFileName withExtension:@"momd"];
+    NSURL *modelURL = [[NSBundle mainBundle] URLForResource:self.modelFileName withExtension:@"momd"];
     _managedObjectModel = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
     return _managedObjectModel;
 }
@@ -230,6 +254,47 @@
     if (error && [self.delegate respondsToSelector:@selector(coreDataManager:errorDidOccur:)]) [self.delegate coreDataManager:self errorDidOccur:error];
     
     return results;
+}
+
+#pragma mark - iCloud
+
+- (void)registerForiCloudNotifications {
+    NSNotificationCenter *notificationCenter = [NSNotificationCenter defaultCenter];
+	
+    [notificationCenter addObserver:self selector:@selector(storesWillChange:) name:NSPersistentStoreCoordinatorStoresWillChangeNotification object:self.persistentStoreCoordinator];
+    [notificationCenter addObserver:self selector:@selector(storesDidChange:) name:NSPersistentStoreCoordinatorStoresDidChangeNotification object:self.persistentStoreCoordinator];
+    [notificationCenter addObserver:self selector:@selector(persistentStoreDidImportUbiquitousContentChanges:) name:NSPersistentStoreDidImportUbiquitousContentChangesNotification object:self.persistentStoreCoordinator];
+}
+
+- (void)persistentStoreDidImportUbiquitousContentChanges:(NSNotification *)changeNotification {
+    NSManagedObjectContext *context = self.managedObjectContext;
+    
+    [context performBlock:^{
+        [context mergeChangesFromContextDidSaveNotification:changeNotification];
+        [self saveObjectContext];
+        
+        if ([self.cloudDelegate respondsToSelector:@selector(coreDataManager:persistentStoreDidImportUbiquitousContentChanges:)])
+            [self.cloudDelegate coreDataManager:self persistentStoreDidImportUbiquitousContentChanges:self.managedObjectContext];
+    }];
+}
+
+- (void)storesWillChange:(NSNotification *)notification {
+    NSManagedObjectContext *context = self.managedObjectContext;
+	
+    [context performBlockAndWait:^{
+        [self saveObjectContext];
+        //[context reset];
+    }];
+    
+    // Notify the delegate
+    if ([self.cloudDelegate respondsToSelector:@selector(coreDataManagerStoresWillChange:)])
+        [self.cloudDelegate coreDataManagerStoresWillChange:self];
+}
+
+- (void)storesDidChange:(NSNotification *)notification {
+    // Notify the delegate
+    if ([self.cloudDelegate respondsToSelector:@selector(coreDataManagerStoresDidChange:)])
+        [self.cloudDelegate coreDataManagerStoresDidChange:self];
 }
 
 @end
