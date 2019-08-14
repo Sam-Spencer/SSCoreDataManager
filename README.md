@@ -1,4 +1,4 @@
-> :warning: The nature of CoreData has changed significantly since the original time of writing of this tool. Since I wrote this, Apple has seriously stepped up their game in regards to simplifying the initialization process, making multithreading safe, and providing straightforward iCloud sync. As such (and this is a good thing), I am sunsetting :sunset: this project and leaving it here only for historical / portfolio purposes.
+> ⚠️  The nature of CoreData has changed significantly since the original time of writing of this tool. Since I wrote this, Apple has seriously stepped up their game in regards to simplifying the initialization process, making multithreading safe, and providing straightforward iCloud sync. As such (and this is a good thing), I am sunsetting 🌅 this project and leaving it here only for historical / portfolio purposes.
 
 SSCoreDataManager
 ===============
